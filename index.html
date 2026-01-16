@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>BLACKSIGNAL AUDITION</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- FONT -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --bg:#000;
+  --panel:#111;
+  --line:#222;
+  --txt:#fff;
+  --sub:#888;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:var(--bg);
+  color:var(--txt);
+}
+.container{
+  display:flex;
+  min-height:100vh;
+}
+aside{
+  flex:1;
+  padding:60px;
+}
+main{
+  width:420px;
+  background:var(--panel);
+  padding:40px;
+  border-left:1px solid var(--line);
+}
+h1{letter-spacing:2px}
+button{
+  width:100%;
+  padding:14px;
+  background:#fff;
+  color:#000;
+  border:none;
+  font-weight:600;
+  cursor:pointer;
+}
+input,textarea{
+  width:100%;
+  background:#000;
+  border:1px solid var(--line);
+  color:#fff;
+  padding:12px;
+  margin-bottom:14px;
+}
+textarea{resize:none}
+.hidden{display:none}
+.entry{
+  border:1px solid var(--line);
+  padding:14px;
+  margin-bottom:14px;
+  font-size:13px;
+}
+.status{
+  display:inline-block;
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:20px;
+  margin-bottom:8px;
+}
+.pending{background:#333;color:#aaa}
+.pass{background:#fff;color:#000}
+.fail{background:#600;color:#fff}
+.status-btns button{
+  width:auto;
+  margin-right:6px;
+  margin-top:8px;
+  padding:6px 10px;
+  font-size:11px;
+}
+@media(max-width:768px){
+  .container{flex-direction:column}
+  main{width:100%;border-left:none;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- LEFT -->
+  <aside>
+    <h1>BLACKSIGNAL</h1>
+    <p style="color:var(--sub)">Official Audition System</p>
+    <button onclick="showAudition()">AUDITION</button><br><br>
+    <button onclick="showAdmin()">ADMIN</button>
+  </aside>
+
+  <!-- RIGHT -->
+  <main>
+
+    <!-- AUDITION -->
+    <section id="audition">
+      <h3>AUDITION</h3>
+      <input id="name" placeholder="Name">
+      <input id="age" placeholder="Virtual Age">
+      <textarea id="lyrics" placeholder="Lyrics"></textarea>
+      <input id="link" placeholder="Snowman Link">
+      <button id="submitBtn">SUBMIT</button>
+    </section>
+
+    <!-- ADMIN LOGIN -->
+    <section id="adminLogin" class="hidden">
+      <h3>ADMIN LOGIN</h3>
+      <input id="email" placeholder="Email">
+      <input id="password" type="password" placeholder="Password">
+      <button id="loginBtn">LOGIN</button>
+    </section>
+
+    <!-- ADMIN PANEL -->
+    <section id="adminPanel" class="hidden">
+      <h3>SUBMISSIONS</h3>
+
+      <div id="summary" style="display:flex;gap:10px;font-size:12px;color:#aaa;margin-bottom:12px"></div>
+
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button onclick="setFilter('all')">ALL</button>
+        <button onclick="setFilter('pass')">PASS</button>
+        <button onclick="setFilter('pending')">PENDING</button>
+      </div>
+
+      <div id="list"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* =======================
+   SUPABASE CONFIG
+======================= */
+const sb = supabase.createClient(
+  "https://uhrxfcpxqexstxshpvqr.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocnhmY3B4cWV4c3R4c2hwdnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0NzI3NjMsImV4cCI6MjA4NDA0ODc2M30.snKSZvrUNBjeCKaDU8AymuDaee5MTUOBx74UjL5MrAg"
+);
+
+const $ = id => document.getElementById(id);
+let currentFilter = "all";
+
+/* =======================
+   UI SWITCH
+======================= */
+function showAudition(){
+  audition.classList.remove("hidden");
+  adminLogin.classList.add("hidden");
+  adminPanel.classList.add("hidden");
+}
+function showAdmin(){
+  audition.classList.add("hidden");
+  adminLogin.classList.remove("hidden");
+  adminPanel.classList.add("hidden");
+}
+
+/* =======================
+   EVENT BINDING (중요)
+======================= */
+document.addEventListener("DOMContentLoaded",()=>{
+  $("submitBtn").addEventListener("click",submitAudition);
+  $("loginBtn").addEventListener("click",loginAdmin);
+});
+
+/* =======================
+   AUDITION SUBMIT
+======================= */
+async function submitAudition(){
+  const { error } = await sb.from("auditions").insert([{
+    name: $("name").value,
+    age: $("age").value,
+    lyrics: $("lyrics").value,
+    link: $("link").value
+  }]);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  alert("Submitted");
+  $("name").value="";
+  $("age").value="";
+  $("lyrics").value="";
+  $("link").value="";
+}
+
+/* =======================
+   ADMIN LOGIN
+======================= */
+async function loginAdmin(){
+  const { error } = await sb.auth.signInWithPassword({
+    email:$("email").value,
+    password:$("password").value
+  });
+  if(error){
+    alert(error.message);
+  }else{
+    adminLogin.classList.add("hidden");
+    adminPanel.classList.remove("hidden");
+    loadAuditions();
+  }
+}
+
+/* =======================
+   LOAD + REALTIME
+======================= */
+async function loadAuditions(){
+  const { data } = await sb
+    .from("auditions")
+    .select("*")
+    .order("created_at",{ascending:false});
+
+  render(data);
+}
+
+sb.channel("auditions")
+  .on("postgres_changes",{event:"*",schema:"public",table:"auditions"},loadAuditions)
+  .subscribe();
+
+/* =======================
+   FILTER
+======================= */
+function setFilter(f){
+  currentFilter=f;
+  loadAuditions();
+}
+
+/* =======================
+   RENDER
+======================= */
+function render(data){
+  const summary = {
+    all:data.length,
+    pass:data.filter(d=>d.status==="pass").length,
+    pending:data.filter(d=>d.status==="pending").length
+  };
+  $("summary").innerText =
+    `TOTAL ${summary.all} | PASS ${summary.pass} | PENDING ${summary.pending}`;
+
+  if(currentFilter!=="all"){
+    data=data.filter(d=>d.status===currentFilter);
+  }
+
+  list.innerHTML="";
+  data.forEach(e=>{
+    list.innerHTML+=`
+      <div class="entry">
+        <span class="status ${e.status||"pending"}">
+          ${label(e.status)}
+        </span><br>
+
+        <b>${e.name}</b> (${e.age})<br><br>
+        ${e.lyrics.replace(/\n/g,"<br>")}<br><br>
+
+        <textarea placeholder="내부 메모"
+          onchange="saveMemo('${e.id}',this.value)"
+          style="height:60px">${e.memo||""}</textarea>
+
+        <div class="status-btns">
+          <button onclick="setStatus('${e.id}','pass')">합격</button>
+          <button onclick="setStatus('${e.id}','pending')">보류</button>
+          <button onclick="failConfirm('${e.id}')">탈락</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function label(s){
+  if(s==="pass")return"합격";
+  if(s==="fail")return"탈락";
+  return"보류";
+}
+
+/* =======================
+   UPDATE / DELETE
+======================= */
+async function setStatus(id,status){
+  await sb.from("auditions")
+    .update({status,reviewed_at:new Date()})
+    .eq("id",id);
+}
+
+async function saveMemo(id,memo){
+  await sb.from("auditions").update({memo}).eq("id",id);
+}
+
+function failConfirm(id){
+  if(confirm("정말 탈락 처리할까요?")){
+    setStatus(id,"fail");
+  }
+}
+</script>
+
+</body>
+</html>
